@@ -25,16 +25,24 @@ const HospitalDashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem("hospitalToken");
-    
-    if (!token) {
-      navigate("/hospital-auth");
-      return;
-    }
+  const token = localStorage.getItem("hospitalToken");
+  
+  if (!token) {
+    navigate("/hospital-auth");
+    return;
+  }
 
-    fetchHospitalData(token);
+  fetchHospitalData(token);
+  fetchRequests(token);
+
+  
+  const intervalId = setInterval(() => {
     fetchRequests(token);
-  }, [navigate]);
+  }, 1000); 
+
+  // Cleanup on unmount
+  return () => clearInterval(intervalId);
+}, [navigate]);
 
   const fetchHospitalData = async (token) => {
     try {
@@ -172,7 +180,7 @@ const HospitalDashboard = () => {
     } catch (err) {
       console.error("Error:", err);
       if (err.response?.status === 404) {
-        setError(err.response.data.message || "No suppliers found for this equipment");
+        setError(err.response.data.message);
       } else {
         setError(err.response?.data?.message || "Failed to submit request");
       }
@@ -206,7 +214,7 @@ const HospitalDashboard = () => {
       }
     } catch (err) {
       console.error("Error finding supplier:", err);
-      alert(err.response?.data?.message || "No suppliers found for this equipment");
+      alert(err.response?.data?.message);
     } finally {
       setFindingMatchFor(null);
     }

@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 // Request sub-schema for hospital requests
 const RequestSchema = new mongoose.Schema({
+  orderId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Order',
+    required: true
+  },
   equipmentName: {
     type: String,
     required: true
@@ -15,16 +20,12 @@ const RequestSchema = new mongoose.Schema({
     enum: ['normal', 'urgent', 'critical'],
     default: 'normal'
   },
-  status: {
-    type: String,
-    enum: ['pending', 'fulfilled', 'rejected'],
-    default: 'pending'
-  },
   dateRequested: {
     type: Date,
     default: Date.now
   }
 });
+
 
 // Main Hospital Schema
 const HospitalSchema = new mongoose.Schema({

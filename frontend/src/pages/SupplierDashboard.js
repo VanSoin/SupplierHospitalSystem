@@ -11,6 +11,9 @@ const SupplierDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState(null);
   const navigate = useNavigate();
+  const [showOrdersModal, setShowOrdersModal] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("supplierToken");
@@ -55,6 +58,38 @@ const SupplierDashboard = () => {
       console.error("Error fetching items:", err);
     }
   };
+  const handleAcceptOrder = async (orderId) => {
+  try {
+    const token = localStorage.getItem('supplierToken');
+    await axios.put(
+  `http://localhost:5000/api/suppliers/orders/${orderId}/accept`,
+  {},
+  { headers: { Authorization: `Bearer ${token}` } }
+);
+
+    setOrders(orders.map(o => o._id === orderId ? { ...o, status: 'ACCEPTED' } : o));
+  } catch (err) {
+    console.error(err);
+    alert('Failed to accept order');
+  }
+};
+
+const handleRejectOrder = async (orderId) => {
+  try {
+    const token = localStorage.getItem('supplierToken');
+    await axios.put(
+  `http://localhost:5000/api/suppliers/orders/${orderId}/reject`,
+  {},
+  { headers: { Authorization: `Bearer ${token}` } }
+);
+
+    setOrders(orders.map(o => o._id === orderId ? { ...o, status: 'REJECTED' } : o));
+  } catch (err) {
+    console.error(err);
+    alert('Failed to reject order');
+  }
+};
+
 
   const handleNewItem = (newItem) => {
     setItems((prev) => [...prev, newItem]);
@@ -119,6 +154,22 @@ const SupplierDashboard = () => {
   const handleCancelEdit = () => {
     setEditingItem(null);
   };
+  const fetchOrders = async () => {
+  setOrdersLoading(true);
+  try {
+    const token = localStorage.getItem("supplierToken");
+    const res = await axios.get("http://localhost:5000/api/suppliers/orders", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setOrders(res.data);
+    setShowOrdersModal(true);
+  } catch (err) {
+    console.error("Error fetching orders:", err);
+    alert("Failed to fetch orders");
+  } finally {
+    setOrdersLoading(false);
+  }
+};
 
   const handleLogout = () => {
     localStorage.removeItem("supplierToken");
@@ -213,6 +264,43 @@ const SupplierDashboard = () => {
             </div>
           )}
         </div>
+        <button 
+        className="logout-btn" 
+        onClick={fetchOrders} 
+        disabled={ordersLoading}
+        style={{ marginLeft: "10px" }}
+      >
+        View Orders
+      </button>
+       {showOrdersModal && (
+  <div className="suppliers-modal-overlay" onClick={() => setShowOrdersModal(false)}>
+    <div className="suppliers-modal" onClick={(e) => e.stopPropagation()}>
+      <h2>Orders Received</h2>
+      {orders.length === 0 ? (
+        <p>No orders yet.</p>
+      ) : (
+        orders.map(order => (
+          <div key={order._id} className="item-card">
+    <h4>{order.equipmentName}</h4>
+    <p><strong>Hospital:</strong> {order.hospital?.hospitalName || 'Unknown'}</p>
+<p><strong>Email:</strong> {order.hospital?.email || 'N/A'}</p>
+<p><strong>Address:</strong> {order.hospital?.hospitalAddress || 'N/A'}</p>
+    <p><strong>Status:</strong> {order.status}</p>
+    <small>Ordered on: {new Date(order.createdAt).toLocaleDateString()}</small>
+
+    {order.status === 'PENDING' && (
+      <div className="item-actions">
+        <button onClick={() => handleAcceptOrder(order._id)}>✅ Accept</button>
+        <button onClick={() => handleRejectOrder(order._id)}>❌ Reject</button>
+      </div>
+    )}
+  </div>
+        ))
+      )}
+    </div>
+  </div>
+)}
+
       </div>
     </div>
   );

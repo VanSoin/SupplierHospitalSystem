@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Hospital = require('../models/Hospital');
 
+
 // Middleware to verify token
 const authMiddleware = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
@@ -20,6 +21,7 @@ const authMiddleware = (req, res, next) => {
     res.status(401).json({ message: 'Token is not valid' });
   }
 };
+
 
 // Register
 router.post('/register', async (req, res) => {
@@ -140,44 +142,31 @@ router.post('/profile', authMiddleware, async (req, res) => {
 });
 
 // Submit Equipment Request
-router.post('/requests', authMiddleware, async (req, res) => {
-  try {
-    const { equipmentName, quantity, urgency } = req.body;
 
-    const hospital = await Hospital.findById(req.hospitalId);
-    
-    if (!hospital.profileComplete) {
-      return res.status(400).json({ message: 'Please complete your profile first' });
-    }
-
-    const newRequest = {
-      equipmentName,
-      quantity,
-      urgency,
-      status: 'pending',
-      dateRequested: new Date()
-    };
-
-    hospital.requests.push(newRequest);
-    await hospital.save();
-
-    res.status(201).json(newRequest);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
 
 // Get all requests for hospital
 router.get('/requests', authMiddleware, async (req, res) => {
   try {
-    const hospital = await Hospital.findById(req.hospitalId);
-    res.json(hospital.requests || []);
+    const hospital = await Hospital.findById(req.hospitalId)
+      .populate('requests.orderId');
+
+    const requestsWithStatus = hospital.requests.map(r => ({
+      _id: r._id,
+      equipmentName: r.equipmentName,
+      quantity: r.quantity,
+      urgency: r.urgency,
+      status: r.orderId ? r.orderId.status : 'PENDING',
+      supplier: r.orderId ? r.orderId.supplier : null,
+      dateRequested: r.dateRequested
+    }));
+
+    res.json(requestsWithStatus);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 // Delete Request
 router.delete('/requests/:index', authMiddleware, async (req, res) => {
   try {

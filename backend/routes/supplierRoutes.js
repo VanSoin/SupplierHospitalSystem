@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-
 // You'll need to create these models
 const Supplier = require('../models/Supplier');
 
@@ -234,5 +233,72 @@ router.put('/items/:index', authMiddleware, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+const Order = require('../models/Order');
+
+// Get all orders for this supplier
+router.get('/orders', authMiddleware, async (req, res) => {
+  try {
+    const orders = await Order.find({ supplier: req.supplierId })
+      .populate("hospital", "hospitalName email hospitalAddress");
+
+    res.json(orders);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+
+
+ 
+
+
+
+
+// Accept an order
+router.put('/orders/:id/accept', authMiddleware, async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      supplier: req.supplierId
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    order.status = "ACCEPTED";
+    await order.save();
+    
+    res.json({ success: true, order });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to accept order" });
+  }
+});
+
+router.put('/orders/:id/reject', authMiddleware, async (req, res) => {
+  try {
+    const order = await Order.findOne({
+      _id: req.params.id,
+      supplier: req.supplierId
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    order.status = "REJECTED"; // enum is uppercase
+    await order.save();
+   
+    res.json({ success: true, order });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to reject order" });
+  }
+});
+
+
 
 module.exports = router;
